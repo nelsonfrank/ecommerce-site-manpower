@@ -3,7 +3,10 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class QueryProductDto {
-  @ApiPropertyOptional({ example: 'phone', description: 'Search term matched against product name or description' })
+  @ApiPropertyOptional({
+    example: 'phone',
+    description: 'Search term matched against product name or description',
+  })
   @IsOptional()
   @IsString()
   search?: string;
@@ -15,7 +18,11 @@ export class QueryProductDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ example: 10, default: 10, description: 'Items per page' })
+  @ApiPropertyOptional({
+    example: 10,
+    default: 10,
+    description: 'Items per page',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

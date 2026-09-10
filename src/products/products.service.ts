@@ -77,8 +77,12 @@ export class ProductsService {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.price !== undefined && { price: new Prisma.Decimal(dto.price) }),
-        ...(dto.stockQuantity !== undefined && { stockQuantity: dto.stockQuantity }),
+        ...(dto.price !== undefined && {
+          price: new Prisma.Decimal(dto.price),
+        }),
+        ...(dto.stockQuantity !== undefined && {
+          stockQuantity: dto.stockQuantity,
+        }),
         ...(dto.image !== undefined && { image: dto.image }),
       },
     });

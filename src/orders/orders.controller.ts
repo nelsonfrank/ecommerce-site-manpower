@@ -1,11 +1,10 @@
+import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import {
-  Controller,
-  Get,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -37,10 +36,7 @@ export class OrdersController {
   @ApiResponse({ status: 200, description: 'Order details retrieved' })
   @ApiResponse({ status: 403, description: 'Forbidden from accessing order' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  async findOne(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.ordersService.findOne(userId, id);
   }
 }

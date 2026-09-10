@@ -8,7 +8,12 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -35,7 +40,9 @@ export class CartController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get current user cart with products and computed totals' })
+  @ApiOperation({
+    summary: 'Get current user cart with products and computed totals',
+  })
   @ApiResponse({ status: 200, description: 'Cart retrieved successfully' })
   async getCart(@CurrentUser('id') userId: string) {
     return this.cartService.getCart(userId);

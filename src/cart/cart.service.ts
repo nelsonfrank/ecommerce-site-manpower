@@ -31,7 +31,9 @@ export class CartService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Product with ID "${dto.productId}" not found`);
+      throw new NotFoundException(
+        `Product with ID "${dto.productId}" not found`,
+      );
     }
 
     const cart = await this.getOrCreateCart(userId);
@@ -45,7 +47,8 @@ export class CartService {
       },
     });
 
-    const targetQuantity = (existingItem ? existingItem.quantity : 0) + dto.quantity;
+    const targetQuantity =
+      (existingItem ? existingItem.quantity : 0) + dto.quantity;
 
     if (targetQuantity > product.stockQuantity) {
       throw new BadRequestException(
@@ -107,7 +110,11 @@ export class CartService {
     };
   }
 
-  async updateCartItem(userId: string, cartItemId: string, dto: UpdateCartItemDto) {
+  async updateCartItem(
+    userId: string,
+    cartItemId: string,
+    dto: UpdateCartItemDto,
+  ) {
     const cartItem = await this.prisma.cartItem.findUnique({
       where: { id: cartItemId },
       include: {

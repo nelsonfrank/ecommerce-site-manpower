@@ -7,12 +7,19 @@ export class CreateUserDto {
   @IsNotEmpty()
   fullName: string;
 
-  @ApiProperty({ example: 'john@example.com', description: 'Unique email address' })
+  @ApiProperty({
+    example: 'john@example.com',
+    description: 'Unique email address',
+  })
   @IsEmail()
   @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ example: 'Password123!', minLength: 6, description: 'User password (at least 6 characters)' })
+  @ApiProperty({
+    example: 'Password123!',
+    minLength: 6,
+    description: 'User password (at least 6 characters)',
+  })
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
