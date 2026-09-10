@@ -23,7 +23,19 @@ export interface ToastNotification {
   image?: string;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  fullName: string;
+}
+
 export interface StoreState {
+  // Auth state
+  user: User | null;
+  token: string | null;
+  setAuth: (user: User, token: string) => void;
+  logout: () => void;
+
   // Cart state
   cart: Record<string, number>;
   addToCart: (id: string, qty?: number) => { success: boolean; clampedQty: number };
@@ -74,9 +86,20 @@ const initialFilters: FilterState = {
   minRating: null,
 };
 
+const defaultUser: User = {
+  id: "u1",
+  email: "jordan@mail.com",
+  fullName: "Jordan Reyes",
+};
+
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
+      user: defaultUser,
+      token: "mock-jwt-token-initial",
+      setAuth: (user: User, token: string) => set({ user, token }),
+      logout: () => set({ user: null, token: null }),
+
       cart: {},
       addToCart: (id: string, qty = 1) => {
         const product = PRODUCTS.find((p) => p.id === id);
@@ -180,6 +203,8 @@ export const useStore = create<StoreState>()(
         removeItem: () => {},
       })),
       partialize: (state) => ({
+        user: state.user,
+        token: state.token,
         cart: state.cart,
         wishlist: state.wishlist,
         currency: state.currency,
