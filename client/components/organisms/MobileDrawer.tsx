@@ -111,6 +111,27 @@ export function MobileDrawer() {
               >
                 Addresses
               </Link>
+              {useStore.getState().user ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    useStore.getState().logout();
+                    useStore.getState().showToast({ message: "You have been signed out." });
+                    setOpen(false);
+                  }}
+                  className="focus-ring py-2 text-left font-sans text-sm font-semibold text-error hover:text-error/80 transition-colors"
+                >
+                  Sign out
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="focus-ring py-2 font-sans text-sm font-semibold text-action hover:text-action-hover transition-colors"
+                >
+                  Sign in
+                </Link>
+              )}
             </div>
           </div>
 

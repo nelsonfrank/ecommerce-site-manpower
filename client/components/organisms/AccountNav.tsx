@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useStore } from "@/lib/store";
 
 export interface AccountNavProps {
   className?: string;
@@ -11,6 +12,18 @@ export interface AccountNavProps {
 
 export function AccountNav({ className }: AccountNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const user = useStore((state) => state.user);
+  const logout = useStore((state) => state.logout);
+  const showToast = useStore((state) => state.showToast);
+
+  const handleSignOut = () => {
+    logout();
+    showToast({
+      message: "You have been signed out.",
+    });
+    router.push("/login");
+  };
 
   const navItems = [
     { label: "Profile", href: "/account" },
@@ -20,7 +33,6 @@ export function AccountNav({ className }: AccountNavProps) {
     { label: "Payment methods", href: "#payment" },
     { label: "Notifications", href: "#notifications" },
     { label: "Security", href: "#security" },
-    { label: "Sign out", href: "#signout" },
   ];
 
   return (
@@ -52,6 +64,23 @@ export function AccountNav({ className }: AccountNavProps) {
           </Link>
         );
       })}
+
+      {user ? (
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="focus-ring block rounded-sm px-3 py-2.5 font-sans text-sm font-semibold text-error hover:bg-error-bg/60 transition-colors whitespace-nowrap md:w-full text-left cursor-pointer"
+        >
+          Sign out
+        </button>
+      ) : (
+        <Link
+          href="/login"
+          className="focus-ring block rounded-sm px-3 py-2.5 font-sans text-sm font-semibold text-action hover:bg-action-subtle transition-colors whitespace-nowrap md:w-full text-left"
+        >
+          Sign in
+        </Link>
+      )}
     </aside>
   );
 }

@@ -1,14 +1,17 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useStore } from "@/lib/store";
 import type { CurrencyCode } from "@/lib/utils";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 import { AccountNav } from "@/components/organisms/AccountNav";
 import { ProfileHeader } from "@/components/organisms/ProfileHeader";
 import { AccountLayout } from "@/components/templates/AccountLayout";
 
 export default function AccountPage() {
+  const user = useStore((state) => state.user);
   const currency = useStore((state) => state.currency);
   const setCurrency = useStore((state) => state.setCurrency);
   const showToast = useStore((state) => state.showToast);
@@ -19,6 +22,9 @@ export default function AccountPage() {
       message: `Store currency changed to ${newCurrency}`,
     });
   };
+
+  const displayName = user?.fullName || "Guest Customer";
+  const displayEmail = user?.email || "Not signed in";
 
   return (
     <div className="space-y-6">
@@ -31,24 +37,40 @@ export default function AccountPage() {
         content={
           <div className="rounded-md border border-mist bg-surface p-5 md:p-6 shadow-sm space-y-6">
             <ProfileHeader
-              name="Jordan Reyes"
-              email="jordan@mail.com"
-              memberSince="Member since Jan 2025"
-              initials="JR"
+              name={displayName}
+              email={displayEmail}
+              memberSince={user ? "Member since Jan 2025" : "Browsing as guest"}
+              initials={
+                user
+                  ? undefined
+                  : "GU"
+              }
               onEdit={() =>
                 showToast({ message: "Profile edit modal opened." })
               }
             />
 
+            {!user && (
+              <div className="rounded-sm bg-action-subtle p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="text-sm">
+                  <strong className="text-ink block font-semibold">Sign in to North & Co.</strong>
+                  <span className="text-slate text-xs">Save your default addresses, manage orders, and sync your wishlist.</span>
+                </div>
+                <Link href="/login" className="focus-ring shrink-0 rounded-sm">
+                  <Button size="sm">Sign in</Button>
+                </Link>
+              </div>
+            )}
+
             <div className="divide-y divide-mist text-sm">
               <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <strong className="text-ink font-semibold">Full name</strong>
-                <span className="text-slate">Jordan Reyes</span>
+                <span className="text-slate">{displayName}</span>
               </div>
 
               <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <strong className="text-ink font-semibold">Email</strong>
-                <span className="text-slate">jordan@mail.com</span>
+                <span className="text-slate">{displayEmail}</span>
               </div>
 
               <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
