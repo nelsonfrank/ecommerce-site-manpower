@@ -68,7 +68,7 @@ export function MobileBottomNav() {
     },
     {
       label: "Account",
-      href: "/account",
+      href: "/dashboard/profile",
       icon: (
         <svg
           className="w-5 h-5"

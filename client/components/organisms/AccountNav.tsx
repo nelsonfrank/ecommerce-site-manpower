@@ -26,13 +26,13 @@ export function AccountNav({ className }: AccountNavProps) {
   };
 
   const navItems = [
-    { label: "Profile", href: "/account" },
-    { label: "Orders", href: "/orders" },
-    { label: "Wishlist", href: "/wishlist" },
-    { label: "Addresses", href: "#addresses" },
-    { label: "Payment methods", href: "#payment" },
-    { label: "Notifications", href: "#notifications" },
-    { label: "Security", href: "#security" },
+    { label: "Profile", href: "/dashboard/profile" },
+    { label: "Orders", href: "/dashboard/orders" },
+    { label: "Wishlist", href: "/dashboard/wishlist" },
+    { label: "Addresses", href: "/dashboard/profile#addresses" },
+    { label: "Payment methods", href: "/dashboard/profile#payment" },
+    { label: "Notifications", href: "/dashboard/profile#notifications" },
+    { label: "Security", href: "/dashboard/profile#security" },
   ];
 
   return (

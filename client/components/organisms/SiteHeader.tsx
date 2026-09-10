@@ -103,7 +103,7 @@ export function SiteHeader() {
           </Link>
 
           {/* Account Button */}
-          <Link href="/account" className="focus-ring rounded-sm" aria-label="Account">
+          <Link href="/dashboard/profile" className="focus-ring rounded-sm" aria-label="Account">
             <IconButton aria-label="Account" title="Account">
               <svg
                 width="19"
