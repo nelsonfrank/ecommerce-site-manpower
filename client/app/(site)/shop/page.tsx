@@ -38,13 +38,19 @@ function ShopContent() {
     }
   }, [urlCategory, setCategory]);
 
-  // Reset page when search changes
+  // Debounce search input
+  const [debouncedSearch, setDebouncedSearch] = React.useState(filters.search);
+
   React.useEffect(() => {
-    setPage(1);
+    const handler = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+      setPage(1); // Reset page when search changes
+    }, 300);
+    return () => clearTimeout(handler);
   }, [filters.search]);
 
   const { data, isLoading, isError } = useProductsQuery({
-    search: filters.search || undefined,
+    search: debouncedSearch || undefined,
     page,
     limit: LIMIT,
   });
