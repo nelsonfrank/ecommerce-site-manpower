@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { useStore } from "@/lib/store";
 import { DashboardSidebar } from "@/components/organisms/DashboardSidebar";
 
 export default function DashboardLayout({
@@ -10,21 +8,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const user = useStore((state) => state.user);
-  const [hasMounted, setHasMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  // Client-side authentication guard
-  React.useEffect(() => {
-    if (hasMounted && !user) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
-    }
-  }, [hasMounted, user, pathname, router]);
 
   return (
     <div className="space-y-6">

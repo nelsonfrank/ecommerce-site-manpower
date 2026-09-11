@@ -56,6 +56,7 @@ function ShopContent() {
   });
 
   // Client-side sort on the fetched page
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const sortedProducts = React.useMemo(() => {
     if (!data?.products) return [];
     let list = [...data.products];
