@@ -16,6 +16,7 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -26,7 +27,10 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user and initialize shopping cart' })
-  @ApiResponse({ status: 201, description: 'User successfully registered' })
+  @ApiResponse({
+    status: 201,
+    description: 'User successfully registered with access and refresh tokens',
+  })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
@@ -34,11 +38,31 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login and receive JWT access token' })
-  @ApiResponse({ status: 200, description: 'Successfully authenticated' })
+  @ApiOperation({ summary: 'Login and receive JWT access and refresh tokens' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully authenticated with access and refresh tokens',
+  })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refresh access token using a valid refresh token',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'New access and refresh tokens issued',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired refresh token',
+  })
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshTokens(refreshTokenDto.refreshToken);
   }
 
   @Get('profile')

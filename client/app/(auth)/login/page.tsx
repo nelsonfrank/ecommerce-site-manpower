@@ -4,24 +4,27 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { useLoginMutation } from "@/lib/api/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormField } from "@/components/molecules/FormField";
+import type { AxiosError } from "axios";
+import type { ApiErrorResponse } from "@/lib/api/types";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get("redirect") || "/account";
+  const redirectPath = searchParams.get("redirect") || "/dashboard/profile";
 
-  const setAuth = useStore((state) => state.setAuth);
   const showToast = useStore((state) => state.showToast);
 
-  const [email, setEmail] = React.useState("jordan@mail.com");
-  const [password, setPassword] = React.useState("••••••••");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [rememberMe, setRememberMe] = React.useState(true);
-  const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+
+  const loginMutation = useLoginMutation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,30 +39,22 @@ function LoginForm() {
       return;
     }
 
-    setIsLoading(true);
-
-    // Simulate authentication
-    setTimeout(() => {
-      setIsLoading(false);
-      const nameFromEmail = email.split("@")[0];
-      const capitalized =
-        nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
-
-      setAuth(
-        {
-          id: "u1",
-          email: email.trim(),
-          fullName: email.includes("jordan") ? "Jordan Reyes" : `${capitalized} User`,
+    loginMutation.mutate(
+      { email: email.trim(), password },
+      {
+        onSuccess: (data) => {
+          showToast({ message: `Welcome back, ${data.user.fullName.split(" ")[0]}!` });
+          router.push(redirectPath);
         },
-        "jwt-access-token-active"
-      );
-
-      showToast({
-        message: "Successfully signed in!",
-      });
-
-      router.push(redirectPath);
-    }, 600);
+        onError: (err) => {
+          const axiosErr = err as AxiosError<ApiErrorResponse>;
+          const msg = axiosErr.response?.data?.message;
+          setErrorMessage(
+            Array.isArray(msg) ? msg[0] : (msg ?? "Invalid email or password.")
+          );
+        },
+      }
+    );
   };
 
   const handleFillDemo = () => {
@@ -142,9 +137,9 @@ function LoginForm() {
             <Button
               type="submit"
               fullWidth
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
             >
-              {isLoading ? "Signing in…" : "Sign in"}
+              {loginMutation.isPending ? "Signing in…" : "Sign in"}
             </Button>
           </div>
         </form>
@@ -156,7 +151,7 @@ function LoginForm() {
             onClick={handleFillDemo}
             className="text-xs text-slate hover:text-ink underline transition-colors cursor-pointer"
           >
-            Fill with sample credentials (jordan@mail.com)
+            Fill with demo credentials (jordan@mail.com)
           </button>
         </div>
       </div>

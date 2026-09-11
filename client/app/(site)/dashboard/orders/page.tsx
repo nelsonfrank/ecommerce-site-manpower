@@ -3,21 +3,41 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ORDERS, getProductById, type OrderStatus } from "@/lib/data";
-import { formatMoney } from "@/lib/utils";
+import { useOrdersQuery } from "@/lib/api/hooks/useOrders";
 import { useStore } from "@/lib/store";
+import { formatMoney } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
+import type { BackendOrderStatus } from "@/lib/api/types";
+
+type FilterOption = "all" | BackendOrderStatus;
+
+function statusLabel(status: BackendOrderStatus): string {
+  switch (status) {
+    case "COMPLETED": return "Delivered";
+    case "PENDING": return "Pending";
+    case "PROCESSING": return "In transit";
+    case "CANCELLED": return "Cancelled";
+  }
+}
+
+function statusVariant(status: BackendOrderStatus): "success" | "warning" | "error" {
+  switch (status) {
+    case "COMPLETED": return "success";
+    case "CANCELLED": return "error";
+    default: return "warning";
+  }
+}
 
 export default function DashboardOrdersPage() {
-  const currency = useStore((state) => state.currency);
-  const [filter, setFilter] = React.useState<"all" | OrderStatus>("all");
+  const currency = useStore((s) => s.currency);
+  const [filter, setFilter] = React.useState<FilterOption>("all");
 
-  const filteredOrders = ORDERS.filter((order) => {
-    if (filter === "all") return true;
-    return order.status === filter;
-  });
+  const { data: orders = [], isLoading, isError } = useOrdersQuery();
+
+  const filteredOrders =
+    filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
   return (
     <div className="space-y-6">
@@ -33,35 +53,44 @@ export default function DashboardOrdersPage() {
         </div>
 
         {/* Filter Chips */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Chip active={filter === "all"} onClick={() => setFilter("all")}>
-            All ({ORDERS.length})
+            All ({orders.length})
           </Chip>
-          <Chip
-            active={filter === "delivered"}
-            onClick={() => setFilter("delivered")}
-          >
+          <Chip active={filter === "COMPLETED"} onClick={() => setFilter("COMPLETED")}>
             Delivered
           </Chip>
-          <Chip
-            active={filter === "in_transit"}
-            onClick={() => setFilter("in_transit")}
-          >
+          <Chip active={filter === "PROCESSING"} onClick={() => setFilter("PROCESSING")}>
             In transit
+          </Chip>
+          <Chip active={filter === "PENDING"} onClick={() => setFilter("PENDING")}>
+            Pending
           </Chip>
         </div>
       </div>
 
       {/* Orders List */}
       <div className="grid gap-3.5">
-        {filteredOrders.length === 0 ? (
+        {isLoading ? (
+          <div className="rounded-md border border-mist bg-surface p-12 text-center text-slate animate-pulse">
+            <p className="text-sm font-sans">Loading orders…</p>
+          </div>
+        ) : isError ? (
+          <div className="rounded-md border border-mist bg-surface p-12 text-center text-error">
+            <p className="text-sm font-sans">Failed to load orders.</p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <div className="rounded-md border border-mist bg-surface p-12 text-center text-slate">
             <p className="text-sm font-sans">No orders found in this category.</p>
           </div>
         ) : (
           filteredOrders.map((order) => {
-            const firstProduct = getProductById(order.items[0]);
-            const isDelivered = order.status === "delivered";
+            const firstItem = order.items[0];
+            const firstProduct = firstItem?.product;
+            const totalCents = Math.round(Number(order.totalAmount) * 100);
+            const placedDate = new Date(order.createdAt).toLocaleDateString("en-US", {
+              month: "short", day: "numeric", year: "numeric",
+            });
 
             return (
               <div
@@ -71,9 +100,9 @@ export default function DashboardOrdersPage() {
                 <div className="flex items-center gap-3.5 min-w-0">
                   {/* Thumbnail */}
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm bg-[#f3f4f5] p-1 border border-mist">
-                    {firstProduct && (
+                    {firstProduct?.image && (
                       <Image
-                        src={firstProduct.img}
+                        src={firstProduct.image}
                         alt={firstProduct.name}
                         fill
                         sizes="64px"
@@ -86,18 +115,14 @@ export default function DashboardOrdersPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <strong className="font-display text-base font-semibold text-ink">
-                        Order #{order.id}
+                        Order #{order.id.slice(0, 8).toUpperCase()}
                       </strong>
-                      <Badge
-                        variant={isDelivered ? "success" : "warning"}
-                        withDot
-                      >
-                        {isDelivered ? "Delivered" : "In transit"}
+                      <Badge variant={statusVariant(order.status)} withDot>
+                        {statusLabel(order.status)}
                       </Badge>
                     </div>
-
                     <div className="text-xs sm:text-sm text-slate font-normal mt-1">
-                      Placed on {order.date} · {order.items.length}{" "}
+                      Placed on {placedDate} · {order.items.length}{" "}
                       {order.items.length === 1 ? "item" : "items"}
                     </div>
                   </div>
@@ -108,14 +133,12 @@ export default function DashboardOrdersPage() {
                   <div className="text-left sm:text-right">
                     <span className="text-xs text-slate block">Total</span>
                     <span className="font-display tabular font-bold text-base text-ink">
-                      {formatMoney(order.total, currency)}
+                      {formatMoney(totalCents, currency)}
                     </span>
                   </div>
 
                   <Link href={`/dashboard/orders/${order.id}`}>
-                    <Button variant="secondary" size="sm">
-                      View details
-                    </Button>
+                    <Button variant="secondary" size="sm">View details</Button>
                   </Link>
                 </div>
               </div>

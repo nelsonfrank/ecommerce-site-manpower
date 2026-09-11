@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { PRODUCTS, type Product } from "./data";
 import type { CurrencyCode } from "./utils";
 
 export type SortOption = "featured" | "rating" | "priceLow" | "priceHigh";
@@ -32,18 +31,21 @@ export interface User {
 export interface StoreState {
   // Auth state
   user: User | null;
+  /** @deprecated Use accessToken */
   token: string | null;
-  setAuth: (user: User, token: string) => void;
+  accessToken: string | null;
+  refreshToken: string | null;
+  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
 
-  // Cart state
+  // Local cart — used for guest users and as optimistic UI cache for authenticated users.
+  // productId → quantity
   cart: Record<string, number>;
-  addToCart: (id: string, qty?: number) => { success: boolean; clampedQty: number };
-  setQuantity: (id: string, qty: number) => void;
+  addToCart: (id: string, qty?: number, stock?: number) => { success: boolean; clampedQty: number };
+  setQuantity: (id: string, qty: number, stock?: number) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
   getCartCount: () => number;
-  getCartSubtotal: () => number;
 
   // Wishlist state
   wishlist: string[];
@@ -86,39 +88,31 @@ const initialFilters: FilterState = {
   minRating: null,
 };
 
-const defaultUser: User = {
-  id: "u1",
-  email: "jordan@mail.com",
-  fullName: "Jordan Reyes",
-};
-
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
-      user: defaultUser,
-      token: "mock-jwt-token-initial",
-      setAuth: (user: User, token: string) => set({ user, token }),
-      logout: () => set({ user: null, token: null }),
+      // ── Auth ──────────────────────────────────────────────────────────────
+      user: null,
+      token: null,
+      accessToken: null,
+      refreshToken: null,
+      setAuth: (user: User, accessToken: string, refreshToken: string) =>
+        set({ user, accessToken, refreshToken, token: accessToken }),
+      logout: () =>
+        set({ user: null, accessToken: null, refreshToken: null, token: null, cart: {} }),
 
+      // ── Local Cart ────────────────────────────────────────────────────────
+      // stock parameter is supplied by the caller (from backend product data).
+      // Falls back to a large number so the caller can still add without stock.
       cart: {},
-      addToCart: (id: string, qty = 1) => {
-        const product = PRODUCTS.find((p) => p.id === id);
-        if (!product || product.stock <= 0) {
-          return { success: false, clampedQty: 0 };
-        }
+      addToCart: (id: string, qty = 1, stock = 9999) => {
+        if (stock <= 0) return { success: false, clampedQty: 0 };
         const currentQty = get().cart[id] || 0;
-        const newQty = Math.min(currentQty + qty, product.stock);
-        set((state) => ({
-          cart: {
-            ...state.cart,
-            [id]: newQty,
-          },
-        }));
+        const newQty = Math.min(currentQty + qty, stock);
+        set((state) => ({ cart: { ...state.cart, [id]: newQty } }));
         return { success: true, clampedQty: newQty };
       },
-      setQuantity: (id: string, qty: number) => {
-        const product = PRODUCTS.find((p) => p.id === id);
-        if (!product) return;
+      setQuantity: (id: string, qty: number, stock = 9999) => {
         if (qty <= 0) {
           set((state) => {
             const next = { ...state.cart };
@@ -126,13 +120,8 @@ export const useStore = create<StoreState>()(
             return { cart: next };
           });
         } else {
-          const clamped = Math.min(qty, product.stock);
-          set((state) => ({
-            cart: {
-              ...state.cart,
-              [id]: clamped,
-            },
-          }));
+          const clamped = Math.min(qty, stock);
+          set((state) => ({ cart: { ...state.cart, [id]: clamped } }));
         }
       },
       removeFromCart: (id: string) => {
@@ -143,16 +132,10 @@ export const useStore = create<StoreState>()(
         });
       },
       clearCart: () => set({ cart: {} }),
-      getCartCount: () => {
-        return Object.values(get().cart).reduce((sum, q) => sum + q, 0);
-      },
-      getCartSubtotal: () => {
-        return Object.entries(get().cart).reduce((sum, [id, qty]) => {
-          const p = PRODUCTS.find((item) => item.id === id);
-          return sum + (p ? p.price * qty : 0);
-        }, 0);
-      },
+      getCartCount: () =>
+        Object.values(get().cart).reduce((sum, q) => sum + q, 0),
 
+      // ── Wishlist ──────────────────────────────────────────────────────────
       wishlist: [],
       toggleWishlist: (id: string) => {
         const list = get().wishlist;
@@ -161,10 +144,9 @@ export const useStore = create<StoreState>()(
         set({ wishlist: next });
         return !exists;
       },
-      isInWishlist: (id: string) => {
-        return get().wishlist.includes(id);
-      },
+      isInWishlist: (id: string) => get().wishlist.includes(id),
 
+      // ── Filters ───────────────────────────────────────────────────────────
       filters: initialFilters,
       setCategory: (category: string) =>
         set((state) => ({ filters: { ...state.filters, category } })),
@@ -180,9 +162,11 @@ export const useStore = create<StoreState>()(
         set((state) => ({ filters: { ...state.filters, minRating: rating } })),
       clearFilters: () => set({ filters: initialFilters }),
 
+      // ── Currency ──────────────────────────────────────────────────────────
       currency: "USD",
       setCurrency: (currency: CurrencyCode) => set({ currency }),
 
+      // ── Toast ─────────────────────────────────────────────────────────────
       toast: null,
       showToast: (t) => {
         const id = Math.random().toString(36).substring(2, 9);
@@ -190,6 +174,7 @@ export const useStore = create<StoreState>()(
       },
       hideToast: () => set({ toast: null }),
 
+      // ── UI ────────────────────────────────────────────────────────────────
       mobileMenuOpen: false,
       setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),
       filterSheetOpen: false,
@@ -197,14 +182,20 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "north-and-co-store",
-      storage: createJSONStorage(() => (typeof window !== "undefined" ? localStorage : {
-        getItem: () => null,
-        setItem: () => {},
-        removeItem: () => {},
-      })),
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined"
+          ? localStorage
+          : {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            }
+      ),
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
+        token: state.accessToken,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
         cart: state.cart,
         wishlist: state.wishlist,
         currency: state.currency,

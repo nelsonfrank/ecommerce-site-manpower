@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { PRODUCTS, CATEGORIES, type Product } from "@/lib/data";
+import { useProductsQuery } from "@/lib/api/hooks/useProducts";
 import { useStore, type SortOption } from "@/lib/store";
 import { Breadcrumb } from "@/components/molecules/Breadcrumb";
 import { Chip } from "@/components/ui/Chip";
@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/Button";
 import { FilterSidebar } from "@/components/organisms/FilterSidebar";
 import { ProductGrid } from "@/components/organisms/ProductGrid";
 import { ShopLayout } from "@/components/templates/ShopLayout";
+import type { Product } from "@/lib/data";
+
+// Backend doesn't have categories; derive from product names for display grouping.
+const CATEGORIES = ["All", "Electronics", "Accessories", "Office", "Kitchen"];
 
 function ShopContent() {
   const searchParams = useSearchParams();
@@ -24,59 +28,52 @@ function ShopContent() {
   const clearFilters = useStore((state) => state.clearFilters);
   const setFilterSheetOpen = useStore((state) => state.setFilterSheetOpen);
 
+  // Track pagination
+  const [page, setPage] = React.useState(1);
+  const LIMIT = 12;
+
   React.useEffect(() => {
     if (urlCategory) {
       setCategory(urlCategory);
     }
   }, [urlCategory, setCategory]);
 
-  const categoryChips = ["All", ...CATEGORIES];
+  // Reset page when search changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [filters.search]);
 
-  // Filtering & Sorting
-  const filteredProducts = React.useMemo(() => {
-    let list = PRODUCTS.filter((p) => {
-      // Category filter
-      if (filters.category !== "All" && p.category !== filters.category) {
-        return false;
-      }
-      // In stock only
-      if (filters.inStockOnly && p.stock <= 0) {
-        return false;
-      }
-      // Search term
-      if (
-        filters.search &&
-        !p.name.toLowerCase().includes(filters.search.toLowerCase()) &&
-        !p.desc.toLowerCase().includes(filters.search.toLowerCase())
-      ) {
-        return false;
-      }
-      // Min price
-      if (filters.minPrice && p.price < Number(filters.minPrice) * 100) {
-        return false;
-      }
-      // Max price
-      if (filters.maxPrice && p.price > Number(filters.maxPrice) * 100) {
-        return false;
-      }
-      // Rating
-      if (filters.minRating && p.rating < filters.minRating) {
-        return false;
-      }
-      return true;
-    });
+  const { data, isLoading, isError } = useProductsQuery({
+    search: filters.search || undefined,
+    page,
+    limit: LIMIT,
+  });
 
-    // Sorting
-    if (filters.sort === "priceLow") {
-      list = [...list].sort((a, b) => a.price - b.price);
-    } else if (filters.sort === "priceHigh") {
-      list = [...list].sort((a, b) => b.price - a.price);
-    } else if (filters.sort === "rating") {
-      list = [...list].sort((a, b) => b.rating - a.rating);
+  // Client-side sort on the fetched page
+  const sortedProducts = React.useMemo(() => {
+    if (!data?.products) return [];
+    let list = [...data.products];
+
+    if (filters.inStockOnly) {
+      list = list.filter((p) => p.stock > 0);
     }
-
+    if (filters.minPrice) {
+      list = list.filter((p) => p.price >= Number(filters.minPrice) * 100);
+    }
+    if (filters.maxPrice) {
+      list = list.filter((p) => p.price <= Number(filters.maxPrice) * 100);
+    }
+    if (filters.sort === "priceLow") {
+      list.sort((a, b) => a.price - b.price);
+    } else if (filters.sort === "priceHigh") {
+      list.sort((a, b) => b.price - a.price);
+    } else if (filters.sort === "rating") {
+      list.sort((a, b) => b.rating - a.rating);
+    }
     return list;
-  }, [filters]);
+  }, [data?.products, filters]);
+
+  const meta = data?.meta;
 
   const toolbar = (
     <div className="space-y-4">
@@ -87,7 +84,9 @@ function ShopContent() {
             Shop
           </h1>
           <p className="font-sans text-sm text-slate font-normal mt-1.5">
-            {filteredProducts.length} {filteredProducts.length === 1 ? "product" : "products"}
+            {isLoading
+              ? "Loading…"
+              : `${meta?.total ?? 0} ${(meta?.total ?? 0) === 1 ? "product" : "products"}`}
           </p>
         </div>
 
@@ -106,7 +105,7 @@ function ShopContent() {
 
       {/* Category Chips Scroll */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-        {categoryChips.map((cat) => (
+        {CATEGORIES.map((cat) => (
           <Chip
             key={cat}
             active={filters.category === cat}
@@ -156,12 +155,46 @@ function ShopContent() {
         toolbar={toolbar}
         sidebar={<FilterSidebar />}
         content={
-          <ProductGrid
-            products={filteredProducts}
-            emptyTitle={`No results for "${filters.search || filters.category}"`}
-            emptyMessage="Try adjusting your search terms or clearing your filters."
-            onClearFilters={clearFilters}
-          />
+          <div className="space-y-6">
+            {isError ? (
+              <div className="py-12 text-center text-slate text-sm">
+                Failed to load products. Please try again.
+              </div>
+            ) : (
+              <ProductGrid
+                products={sortedProducts as Product[]}
+                isLoading={isLoading}
+                emptyTitle={`No results for "${filters.search || filters.category}"`}
+                emptyMessage="Try adjusting your search terms or clearing your filters."
+                onClearFilters={clearFilters}
+              />
+            )}
+
+            {/* Pagination */}
+            {meta && meta.totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 pt-4">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-slate">
+                  Page {meta.page} of {meta.totalPages}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={page >= meta.totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
         }
       />
     </div>

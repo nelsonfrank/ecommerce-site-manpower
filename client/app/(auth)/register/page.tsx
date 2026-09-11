@@ -4,14 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { useRegisterMutation } from "@/lib/api/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormField } from "@/components/molecules/FormField";
+import type { AxiosError } from "axios";
+import type { ApiErrorResponse } from "@/lib/api/types";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const setAuth = useStore((state) => state.setAuth);
   const showToast = useStore((state) => state.showToast);
 
   const [fullName, setFullName] = React.useState("");
@@ -19,8 +21,9 @@ export default function RegisterPage() {
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [agreedToTerms, setAgreedToTerms] = React.useState(true);
-  const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+
+  const registerMutation = useRegisterMutation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,25 +50,26 @@ export default function RegisterPage() {
       return;
     }
 
-    setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      setAuth(
-        {
-          id: `u_${Date.now()}`,
-          fullName: fullName.trim(),
-          email: email.trim(),
+    registerMutation.mutate(
+      { fullName: fullName.trim(), email: email.trim(), password },
+      {
+        onSuccess: (data) => {
+          showToast({
+            message: `Welcome to North & Co., ${data.user.fullName.split(" ")[0]}!`,
+          });
+          router.push("/dashboard/profile");
         },
-        "jwt-access-token-registered"
-      );
-
-      showToast({
-        message: `Welcome to North & Co., ${fullName.split(" ")[0]}!`,
-      });
-
-      router.push("/account");
-    }, 600);
+        onError: (err) => {
+          const axiosErr = err as AxiosError<ApiErrorResponse>;
+          const msg = axiosErr.response?.data?.message;
+          setErrorMessage(
+            Array.isArray(msg)
+              ? msg[0]
+              : (msg ?? "Registration failed. Please try again.")
+          );
+        },
+      }
+    );
   };
 
   return (
@@ -76,7 +80,7 @@ export default function RegisterPage() {
           Create an account
         </h1>
         <p className="font-sans text-sm text-slate">
-          Join North & Co. to track orders, save favorites, and check out faster.
+          Join North &amp; Co. to track orders, save favorites, and check out faster.
         </p>
       </div>
 
@@ -164,12 +168,8 @@ export default function RegisterPage() {
           </div>
 
           <div className="pt-2">
-            <Button
-              type="submit"
-              fullWidth
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating account…" : "Create account"}
+            <Button type="submit" fullWidth disabled={registerMutation.isPending}>
+              {registerMutation.isPending ? "Creating account…" : "Create account"}
             </Button>
           </div>
         </form>

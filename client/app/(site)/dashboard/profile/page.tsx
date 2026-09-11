@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useStore } from "@/lib/store";
+import { useProfileQuery } from "@/lib/api/hooks/useAuth";
 import type { CurrencyCode } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -10,19 +11,39 @@ import { FormField } from "@/components/molecules/FormField";
 import { ProfileHeader } from "@/components/organisms/ProfileHeader";
 
 export default function DashboardProfilePage() {
-  const user = useStore((state) => state.user);
-  const setAuth = useStore((state) => state.setAuth);
-  const token = useStore((state) => state.token);
-  const currency = useStore((state) => state.currency);
-  const setCurrency = useStore((state) => state.setCurrency);
-  const showToast = useStore((state) => state.showToast);
+  const user = useStore((s) => s.user);
+  const setAuth = useStore((s) => s.setAuth);
+  const accessToken = useStore((s) => s.accessToken);
+  const refreshToken = useStore((s) => s.refreshToken);
+  const currency = useStore((s) => s.currency);
+  const setCurrency = useStore((s) => s.setCurrency);
+  const showToast = useStore((s) => s.showToast);
 
-  const [fullName, setFullName] = React.useState(user?.fullName || "Jordan Reyes");
-  const [email, setEmail] = React.useState(user?.email || "jordan@mail.com");
-  const [address, setAddress] = React.useState("12 Main St, Springfield, IL 62701");
+  const { data: profile } = useProfileQuery();
+
+  // Sync profile data from server if available
+  const displayName = profile?.fullName ?? user?.fullName ?? "";
+  const displayEmail = profile?.email ?? user?.email ?? "";
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "Member";
+
+  const [fullName, setFullName] = React.useState(displayName);
+  const [email, setEmail] = React.useState(displayEmail);
+  const [address, setAddress] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
 
-  // Security password state
+  // Update form when profile loads
+  React.useEffect(() => {
+    if (profile) {
+      setFullName(profile.fullName);
+      setEmail(profile.email);
+    }
+  }, [profile]);
+
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = React.useState(false);
@@ -31,29 +52,23 @@ export default function DashboardProfilePage() {
     e.preventDefault();
     setIsSaving(true);
 
+    // Update local store state optimistically
     setTimeout(() => {
       setIsSaving(false);
-      if (user) {
+      if (user && accessToken && refreshToken) {
         setAuth(
-          {
-            ...user,
-            fullName: fullName.trim(),
-            email: email.trim(),
-          },
-          token || "mock-token"
+          { ...user, fullName: fullName.trim(), email: email.trim() },
+          accessToken,
+          refreshToken
         );
       }
-      showToast({
-        message: "Profile details updated successfully!",
-      });
+      showToast({ message: "Profile details updated successfully!" });
     }, 400);
   };
 
   const handleCurrencyChange = (newCurrency: CurrencyCode) => {
     setCurrency(newCurrency);
-    showToast({
-      message: `Store currency changed to ${newCurrency}`,
-    });
+    showToast({ message: `Store currency changed to ${newCurrency}` });
   };
 
   const handleUpdatePassword = (e: React.FormEvent) => {
@@ -77,18 +92,16 @@ export default function DashboardProfilePage() {
       {/* Profile Header Card */}
       <div className="rounded-md border border-mist bg-surface p-6 shadow-sm">
         <ProfileHeader
-          name={user?.fullName || fullName}
-          email={user?.email || email}
-          memberSince="Member since Jan 2025"
+          name={displayName}
+          email={displayEmail}
+          memberSince={`Member since ${memberSince}`}
         />
       </div>
 
       {/* Personal Details Form */}
       <div className="rounded-md border border-mist bg-surface p-6 shadow-sm space-y-5">
         <div>
-          <h2 className="font-display font-semibold text-lg text-ink">
-            Personal Details
-          </h2>
+          <h2 className="font-display font-semibold text-lg text-ink">Personal Details</h2>
           <p className="font-sans text-xs text-slate">
             Update your account information and default shipping preferences.
           </p>
@@ -121,7 +134,7 @@ export default function DashboardProfilePage() {
               id="profile-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              required
+              placeholder="12 Main St, Springfield, IL 62701"
             />
           </FormField>
 
@@ -136,9 +149,7 @@ export default function DashboardProfilePage() {
       {/* Preferences Section: Currency */}
       <div className="rounded-md border border-mist bg-surface p-6 shadow-sm space-y-4">
         <div>
-          <h2 className="font-display font-semibold text-lg text-ink">
-            Shopping Preferences
-          </h2>
+          <h2 className="font-display font-semibold text-lg text-ink">Shopping Preferences</h2>
           <p className="font-sans text-xs text-slate">
             Select your preferred currency for display and checkout calculations sitewide.
           </p>
@@ -167,9 +178,7 @@ export default function DashboardProfilePage() {
       {/* Security & Password Form */}
       <div className="rounded-md border border-mist bg-surface p-6 shadow-sm space-y-5">
         <div>
-          <h2 className="font-display font-semibold text-lg text-ink">
-            Security & Password
-          </h2>
+          <h2 className="font-display font-semibold text-lg text-ink">Security &amp; Password</h2>
           <p className="font-sans text-xs text-slate">
             Change your account password regularly to keep your profile secure.
           </p>

@@ -4,18 +4,44 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+
+export interface JwtTokens {
+  accessToken: string;
+  refreshToken: string;
+}
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private generateTokens(userId: string, email: string): JwtTokens {
+    const payload = { sub: userId, email };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>(
+        'JWT_REFRESH_SECRET',
+        'super-secret-refresh-token-key-2026',
+      ),
+      expiresIn: (this.configService.get<string>(
+        'JWT_REFRESH_EXPIRES_IN',
+        '7d',
+      )) as JwtSignOptions['expiresIn'],
+    });
+
+    return { accessToken, refreshToken };
+  }
 
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({
@@ -46,9 +72,12 @@ export class AuthService {
       },
     });
 
+    const tokens = this.generateTokens(user.id, user.email);
+
     return {
       message: 'User registered successfully',
       user,
+      ...tokens,
     };
   }
 
@@ -66,17 +95,45 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const payload = { sub: user.id, email: user.email };
-    const accessToken = this.jwtService.sign(payload);
+    const tokens = this.generateTokens(user.id, user.email);
 
     return {
-      accessToken,
+      ...tokens,
       user: {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
       },
     };
+  }
+
+  async refreshTokens(refreshToken: string): Promise<JwtTokens> {
+    let payload: { sub: string; email: string };
+
+    try {
+      payload = this.jwtService.verify<{ sub: string; email: string }>(
+        refreshToken,
+        {
+          secret: this.configService.get<string>(
+            'JWT_REFRESH_SECRET',
+            'super-secret-refresh-token-key-2026',
+          ),
+        },
+      );
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Ensure the user still exists in the database
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    return this.generateTokens(user.id, user.email);
   }
 
   async getProfile(userId: string) {

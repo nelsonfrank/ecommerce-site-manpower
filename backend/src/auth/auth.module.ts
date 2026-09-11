@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -18,7 +19,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         ),
         signOptions: {
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ??
-            '1d') as JwtSignOptions['expiresIn'],
+            '15m') as JwtSignOptions['expiresIn'],
         },
       }),
     }),
