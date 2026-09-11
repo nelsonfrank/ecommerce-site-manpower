@@ -8,18 +8,18 @@ import { useStore } from "@/lib/store";
 import { Logo } from "@/components/ui/Logo";
 import { IconButton } from "@/components/ui/IconButton";
 import { SearchBar } from "@/components/molecules/SearchBar";
+import { useCartQuery } from "@/lib/api/hooks";
 
 export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const cart = useStore((state) => state.cart);
   const wishlist = useStore((state) => state.wishlist);
   const setMobileMenuOpen = useStore((state) => state.setMobileMenuOpen);
   const setSearch = useStore((state) => state.setSearch);
   const searchValue = useStore((state) => state.filters.search);
-
-  const cartCount = Object.values(cart).reduce((sum, q) => sum + q, 0);
+  const { data: cart } = useCartQuery();
+  const cartCount = cart?.items.length || 0;
   const displayCartCount = cartCount > 9 ? "9+" : cartCount;
 
   const wishCount = wishlist.length;

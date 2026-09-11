@@ -11,6 +11,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
 import { Rating } from "@/components/ui/Rating";
 import { Price } from "@/components/ui/Price";
+import { useAddToCartMutation } from "@/lib/api/hooks";
 
 export interface ProductCardProps {
   product: Product;
@@ -29,7 +30,7 @@ export function ProductCard({
   const toggleWishlist = useStore((state) => state.toggleWishlist);
   const addToCartStore = useStore((state) => state.addToCart);
   const showToast = useStore((state) => state.showToast);
-
+  const addToCartMutation = useAddToCartMutation();
   const inWish = isInWishlist;
   const isOutOfStock = product.stock === 0;
   const isLowStock = product.stock > 0 && product.stock <= 3;
@@ -67,12 +68,20 @@ export function ProductCard({
       if (onAddToCart) {
         onAddToCart(product);
       } else {
-        addToCartStore(product.id, 1);
-        showToast({
-          message: `${product.name} added to cart`,
-          actionLabel: "View cart",
-          actionHref: "/cart",
-          image: product.img,
+        addToCartMutation.mutate({ productId: product.id, quantity: 1 }, {
+          onSuccess: () => {
+            showToast({
+              message: `${product.name} added to cart`,
+              actionLabel: "View cart",
+              actionHref: "/cart",
+              image: product.img,
+            });
+          },
+          onError: () => {
+            showToast({
+              message: `${product.name} failed to add to cart`,
+            });
+          }
         });
       }
     }

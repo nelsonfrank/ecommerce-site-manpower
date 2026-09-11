@@ -30,10 +30,6 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
     { label: "Profile", href: "/dashboard/profile", exact: false },
     { label: "Orders", href: "/dashboard/orders", exact: false },
     { label: "Wishlist", href: "/dashboard/wishlist", exact: false },
-    { label: "Addresses", href: "/dashboard/profile#addresses", exact: false },
-    { label: "Payment methods", href: "/dashboard/profile#payment", exact: false },
-    { label: "Notifications", href: "/dashboard/profile#notifications", exact: false },
-    { label: "Security", href: "/dashboard/profile#security", exact: false },
   ];
 
   return (

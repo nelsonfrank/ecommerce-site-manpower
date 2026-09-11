@@ -44,7 +44,7 @@ function LoginForm() {
       {
         onSuccess: (data) => {
           showToast({ message: `Welcome back, ${data.user.fullName.split(" ")[0]}!` });
-          router.push(redirectPath);
+          router.push(redirectPath || "/dashboard");
         },
         onError: (err) => {
           const axiosErr = err as AxiosError<ApiErrorResponse>;
@@ -55,12 +55,6 @@ function LoginForm() {
         },
       }
     );
-  };
-
-  const handleFillDemo = () => {
-    setEmail("jordan@mail.com");
-    setPassword("password123");
-    setErrorMessage("");
   };
 
   return (
@@ -143,17 +137,6 @@ function LoginForm() {
             </Button>
           </div>
         </form>
-
-        {/* Demo Quick Fill Button */}
-        <div className="mt-5 pt-4 border-t border-mist text-center">
-          <button
-            type="button"
-            onClick={handleFillDemo}
-            className="text-xs text-slate hover:text-ink underline transition-colors cursor-pointer"
-          >
-            Fill with demo credentials (jordan@mail.com)
-          </button>
-        </div>
       </div>
 
       {/* Footer Registration Link */}

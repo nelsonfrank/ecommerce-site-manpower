@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { useCartQuery, useUpdateCartItemMutation, useRemoveFromCartMutation } from "@/lib/api/hooks/useCart";
 import { useProductsQuery } from "@/lib/api/hooks/useProducts";
