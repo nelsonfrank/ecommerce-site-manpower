@@ -29,7 +29,6 @@ export function SiteHeader() {
     { label: "Home", href: "/" },
     { label: "Shop", href: "/shop" },
     { label: "Categories", href: "/shop?category=All" },
-    { label: "Orders", href: "/orders" },
   ];
 
   const handleSearchChange = (query: string) => {
