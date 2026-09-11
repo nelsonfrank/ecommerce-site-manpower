@@ -1,16 +1,27 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
-import { PRODUCTS } from "@/lib/data";
+import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/Button";
 import { ProductGrid } from "@/components/organisms/ProductGrid";
+import { useProductsQuery } from "@/lib/api/hooks";
 
 export default function DashboardWishlistPage() {
   const wishlist = useStore((state) => state.wishlist);
 
-  const savedProducts = PRODUCTS.filter((p) => wishlist.includes(p.id));
+  const { data, isLoading } = useProductsQuery();
+
+  const products = data?.products;
+
+  const savedProducts = useMemo(
+    () => (products ? products?.filter((p) => wishlist.includes(p.id)) : []),
+    [products, wishlist],
+  );
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -21,7 +32,8 @@ export default function DashboardWishlistPage() {
             Saved Wishlist
           </h1>
           <p className="font-sans text-sm text-slate mt-1">
-            {savedProducts.length} saved {savedProducts.length === 1 ? "item" : "items"} in your account.
+            {savedProducts.length} saved{" "}
+            {savedProducts.length === 1 ? "item" : "items"} in your account.
           </p>
         </div>
 
@@ -45,7 +57,8 @@ export default function DashboardWishlistPage() {
             Your wishlist is empty
           </h2>
           <p className="font-sans text-slate text-sm">
-            Explore our collection and click the heart icon on any product to save it here.
+            Explore our collection and click the heart icon on any product to
+            save it here.
           </p>
           <div className="pt-2">
             <Link href="/shop" className="focus-ring rounded-sm inline-block">

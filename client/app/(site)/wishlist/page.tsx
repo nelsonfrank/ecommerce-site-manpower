@@ -2,15 +2,28 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PRODUCTS } from "@/lib/data";
+import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/Button";
 import { ProductGrid } from "@/components/organisms/ProductGrid";
+import { useProductsQuery } from "@/lib/api/hooks";
 
 export default function WishlistPage() {
   const wishlist = useStore((state) => state.wishlist);
 
-  const savedProducts = PRODUCTS.filter((p) => wishlist.includes(p.id));
+  const { data, isLoading } = useProductsQuery();
+
+  const products = data?.products;
+
+  const savedProducts = useMemo(
+    () => products? products?.filter((p) => wishlist.includes(p.id)) : [],
+    [products, wishlist]
+  );
+
+  if(isLoading){
+    return <div>Loading...</div>
+  }
+
 
   return (
     <div className="space-y-6">
