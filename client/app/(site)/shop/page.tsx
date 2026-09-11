@@ -43,8 +43,10 @@ function ShopContent() {
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearch(filters.search);
-      setPage(1); // Reset page when search changes
+      if (filters.search.length === 0 || filters.search.length >= 3) {
+        setDebouncedSearch(filters.search);
+        setPage(1); // Reset page when search changes
+      }
     }, 300);
     return () => clearTimeout(handler);
   }, [filters.search]);
